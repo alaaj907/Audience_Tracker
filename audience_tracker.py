@@ -16,10 +16,14 @@ if 'upload_history' not in st.session_state:
 if 'audience_dict' not in st.session_state:
     st.session_state.audience_dict = {}
 
-# Simple authentication (for demo - use proper auth in production)
+# Team Members Authentication
 USERS = {
     "admin": "password123",
-    "user": "demo123"
+    "Alaa": "alaa123",
+    "Ashley": "beyonce101",
+    "Flora": "truffle",
+    "Tom": "excel101",
+    "Sebastian": "databricks101",
 }
 
 def login_page():
@@ -29,27 +33,22 @@ def login_page():
     
     with col2:
         st.markdown("---")
-        username = st.text_input("Username", key="login_username")
+        username = st.selectbox(
+            "Select Your Name",
+            options=list(USERS.keys()),
+            key="login_username"
+        )
         password = st.text_input("Password", type="password", key="login_password")
         
-        col_btn1, col_btn2 = st.columns(2)
-        with col_btn1:
-            if st.button("Login", use_container_width=True):
-                if username in USERS and USERS[username] == password:
-                    st.session_state.logged_in = True
-                    st.session_state.username = username
-                    st.rerun()
-                else:
-                    st.error("Invalid username or password")
-        
-        with col_btn2:
-            if st.button("Demo Login", use_container_width=True):
+        if st.button("Login", use_container_width=True):
+            if username in USERS and USERS[username] == password:
                 st.session_state.logged_in = True
-                st.session_state.username = "demo_user"
+                st.session_state.username = username
                 st.rerun()
+            else:
+                st.error("Invalid password")
         
         st.markdown("---")
-        st.info("💡 Demo credentials: username=`user`, password=`demo123`")
 
 def process_excel(uploaded_file):
     """Process uploaded Excel file and extract audience data"""
