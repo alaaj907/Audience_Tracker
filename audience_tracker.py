@@ -1,13 +1,3 @@
-"""
-Audience Data Tracker - Streamlit App
-Each user has their own private data storage
-
-Installation:
-pip install streamlit pandas openpyxl
-
-Run:
-streamlit run audience_tracker.py
-"""
 
 import streamlit as st
 import pandas as pd
@@ -72,23 +62,59 @@ def login_page():
 def process_excel(uploaded_file):
     """Process uploaded Excel file and extract audience data"""
     try:
+        # Read the Excel file
         df = pd.read_excel(uploaded_file)
         
-        # Clean column names
+        # Show debug info
+        st.write("**📋 File Info:**")
+        st.write(f"- Total rows: {len(df)}")
+        st.write(f"- Columns found: {list(df.columns)}")
+        
+        # Show first few rows
+        with st.expander("View first 3 rows of your file"):
+            st.dataframe(df.head(3))
+        
+        # Clean column names (strip whitespace and make case-insensitive matching)
         df.columns = df.columns.str.strip()
+        
+        # Try to find the columns (case-insensitive)
+        col_mapping = {}
+        for col in df.columns:
+            col_lower = col.lower()
+            if 'audience name' in col_lower or col_lower == 'name':
+                col_mapping['audience_name'] = col
+            elif 'audience size' in col_lower or col_lower == 'size':
+                col_mapping['audience_size'] = col
+            elif 'creation date' in col_lower or 'created' in col_lower:
+                col_mapping['creation_date'] = col
+            elif 'refresh date' in col_lower or 'refreshed' in col_lower:
+                col_mapping['refresh_date'] = col
+        
+        st.write(f"**✅ Columns matched:** {col_mapping}")
+        
+        # Check if we found the audience name column
+        if 'audience_name' not in col_mapping:
+            st.error("❌ Could not find 'Audience Name' column. Please make sure your Excel file has a column named 'Audience Name'")
+            return None
         
         # Create dictionary from dataframe
         audience_dict = {}
         
         for _, row in df.iterrows():
-            audience_name = row.get('Audience Name', None)
+            audience_name = row.get(col_mapping['audience_name'], None)
             
             if pd.notna(audience_name):
                 audience_dict[str(audience_name)] = {
-                    'audienceSize': int(row.get('Audience Size', 0)) if pd.notna(row.get('Audience Size', 0)) else 0,
-                    'creationDate': str(row.get('Audience Creation Date', '')) if pd.notna(row.get('Audience Creation Date', '')) else '',
-                    'refreshDate': str(row.get('Audience Refresh Date', '')) if pd.notna(row.get('Audience Refresh Date', '')) else ''
+                    'audienceSize': int(row.get(col_mapping.get('audience_size', ''), 0)) if pd.notna(row.get(col_mapping.get('audience_size', ''), 0)) else 0,
+                    'creationDate': str(row.get(col_mapping.get('creation_date', ''), '')) if pd.notna(row.get(col_mapping.get('creation_date', ''), '')) else '',
+                    'refreshDate': str(row.get(col_mapping.get('refresh_date', ''), '')) if pd.notna(row.get(col_mapping.get('refresh_date', ''), '')) else ''
                 }
+        
+        if len(audience_dict) == 0:
+            st.warning("⚠️ No valid audience data found. Check if 'Audience Name' column has data.")
+            return None
+        
+        st.write(f"**🎉 Successfully extracted {len(audience_dict)} audiences!**")
         
         return audience_dict
     
@@ -98,7 +124,9 @@ def process_excel(uploaded_file):
         st.info("After installing, restart the Streamlit app.")
         return None
     except Exception as e:
-        st.error(f"Error processing file: {str(e)}")
+        st.error(f"❌ Error processing file: {str(e)}")
+        st.write("Full error details:")
+        st.exception(e)
         return None
 
 def get_changes(upload_history):
